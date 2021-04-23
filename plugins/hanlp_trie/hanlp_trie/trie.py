@@ -34,6 +34,7 @@ class Node(object):
     # 确定有限状态自动机：key-需要查询的字符串（词）；返回结果如果为None，则说明为查询到对应的节点（不是词），否则反之
     def transit(self, key):
         """Transit the state of a Deterministic Finite Automata (DFA) with key.
+            用于状态转移之前，在当前节点的子节点字典中寻找key（单子或词）是否存在
 
         Args:
             key: A sequence of criterion (tokens or characters) used to transit to a new state.
@@ -110,6 +111,8 @@ class Trie(Node):
             self[k] = v
         return self
 
+    # 在HanLp的设计中，参数text是一个str，还是一个str的列表并不重要，在Trie的设计中会自动进行转换为字节序列
+    # 全匹配算法
     def parse(self, text: Sequence[str]) -> List[Tuple[int, int, Any]]:
         """Keywords lookup which takes a piece of text as input, and lookup all occurrences of keywords in it. These
         occurrences can overlap with each other.
@@ -123,17 +126,21 @@ class Trie(Node):
             A tuple of ``(begin, end, value)``.
         """
         found = []
+        # 两层循环是为了控制词的开始和结束的索引
         for i in range(len(text)):
-            state = self
+            # 第一层控制词的开头索引
+            state = self  # 初始化状态：根节点
             for j in range(i, len(text)):
-                state = state.transit(text[j])
-                if state:
-                    if state._value is not None:
-                        found.append((i, j + 1, state._value))
-                else:
-                    break
+                # 第二层控制词的结尾索引
+                state = state.transit(text[j])  # 判断当前字符在子节点字典中是否存在，并且赋值给当前状态字段（状态预改变）
+                if state:  # 1、如果存在
+                    if state._value is not None:  # 1.1、并且当前状态节点的_value值不为 None
+                        found.append((i, j + 1, state._value))  # 1.1.1、添加进结果列表
+                else:  # 2、如果不存在
+                    break  # 2.1、跳出本层循环，说明当前字符在子节点字典中不存在，状态转移一定会失败
         return found
 
+    # 最长匹配算法
     def parse_longest(self, text: Sequence[str]) -> List[Tuple[int, int, Any]]:
         """Longest-prefix-matching which tries to match the longest keyword sequentially from the head of the text till
         its tail. By definition, the matches won't overlap with each other.
