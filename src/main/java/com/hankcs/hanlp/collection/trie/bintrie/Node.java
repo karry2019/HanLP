@@ -15,7 +15,8 @@ package com.hankcs.hanlp.collection.trie.bintrie;
 import com.hankcs.hanlp.collection.trie.bintrie.util.ArrayTool;
 
 /**
- * 深度大于等于2的子节点
+ * 深度大于等于2的子节点</br>
+ * <p>非第一级子节点，故在首字散列其余二分的字典树实现中不涉及散列的问题，子节点数组中的数据末尾追加即可</p>
  *
  * @author He Han
  */
