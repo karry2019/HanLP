@@ -27,14 +27,13 @@ import java.util.Set;
  * @param <V> 值
  * @author He Han
  */
-public abstract class BaseNode<V> implements Comparable<BaseNode>
-{
+public abstract class BaseNode<V> implements Comparable<BaseNode> {
     /**
      * 状态数组，方便读取的时候用
      */
     static final Status[] ARRAY_STATUS = Status.values();
     /**
-     * 子节点
+     * 子节点数组
      */
     protected BaseNode[] child;
     /**
@@ -42,7 +41,7 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
      */
     protected Status status;
     /**
-     * 节点代表的字符
+     * 节点代表的字符，即节点标识
      */
     protected char c;
     /**
@@ -50,22 +49,19 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
      */
     protected V value;
 
-    public BaseNode<V> transition(String path, int begin)
-    {
+
+    public BaseNode<V> transition(String path, int begin) {
         BaseNode<V> cur = this;
-        for (int i = begin; i < path.length(); ++i)
-        {
+        for (int i = begin; i < path.length(); ++i) {
             cur = cur.getChild(path.charAt(i));
             if (cur == null || cur.status == Status.UNDEFINED_0) return null;
         }
         return cur;
     }
 
-    public BaseNode<V> transition(char[] path, int begin)
-    {
+    public BaseNode<V> transition(char[] path, int begin) {
         BaseNode<V> cur = this;
-        for (int i = begin; i < path.length; ++i)
-        {
+        for (int i = begin; i < path.length; ++i) {
             cur = cur.getChild(path[i]);
             if (cur == null || cur.status == Status.UNDEFINED_0) return null;
         }
@@ -73,12 +69,13 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
     }
 
     /**
-     * 转移状态
+     * 转移状态</br>
+     * DFA: 确定有限状态自动机
+     *
      * @param path
      * @return
      */
-    public BaseNode<V> transition(char path)
-    {
+    public BaseNode<V> transition(char path) {
         BaseNode<V> cur = this;
         cur = cur.getChild(path);
         if (cur == null || cur.status == Status.UNDEFINED_0) return null;
@@ -86,30 +83,30 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
     }
 
     /**
-     * 添加子节点
+     * 添加子节点</br>
+     * <p>新增子节点操作的后果：要么新增，要么修改</p>
      *
      * @return true-新增了节点 false-修改了现有节点
      */
     protected abstract boolean addChild(BaseNode node);
 
     /**
-     * 是否含有子节点
+     * 是否含有子节点</br>
+     * <p>是否含有子节点，与状态转移是否成功没有关系: 查询的子节点存在的情况下，如果{@link  Status#UNDEFINED_0}，则状态转移不成功</p>
      *
      * @param c 子节点的char
      * @return 是否含有
      */
-    protected boolean hasChild(char c)
-    {
+    protected boolean hasChild(char c) {
         return getChild(c) != null;
     }
 
-    protected char getChar()
-    {
+    protected char getChar() {
         return c;
     }
 
     /**
-     * 获取子节点
+     * 获取指定节点代表字符标识的子节点，非当前节点的子节点数组
      *
      * @param c 子节点的char
      * @return 子节点
@@ -121,8 +118,7 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
      *
      * @return 值
      */
-    public final V getValue()
-    {
+    public final V getValue() {
         return value;
     }
 
@@ -131,30 +127,26 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
      *
      * @param value 值
      */
-    public final void setValue(V value)
-    {
+    public final void setValue(V value) {
         this.value = value;
     }
 
     @Override
-    public int compareTo(BaseNode other)
-    {
+    public int compareTo(BaseNode other) {
         return compareTo(other.getChar());
     }
 
     /**
      * 重载，与字符的比较
+     *
      * @param other
      * @return
      */
-    public int compareTo(char other)
-    {
-        if (this.c > other)
-        {
+    public int compareTo(char other) {
+        if (this.c > other) {
             return 1;
         }
-        if (this.c < other)
-        {
+        if (this.c < other) {
             return -1;
         }
         return 0;
@@ -162,98 +154,91 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
 
     /**
      * 获取节点的成词状态
+     *
      * @return
      */
-    public Status getStatus()
-    {
+    public Status getStatus() {
         return status;
     }
 
-    protected void walk(StringBuilder sb, Set<Map.Entry<String, V>> entrySet)
-    {
+    /**
+     * 获取整棵字典树的词条{@link Map.Entry<String, V>}的集合
+     *
+     * @param sb
+     * @param entrySet
+     */
+    protected void walk(StringBuilder sb, Set<Map.Entry<String, V>> entrySet) {
         sb.append(c);
-        if (status == Status.WORD_MIDDLE_2 || status == Status.WORD_END_3)
-        {
+        if (status == Status.WORD_MIDDLE_2 || status == Status.WORD_END_3) {
             entrySet.add(new TrieEntry(sb.toString(), value));
         }
         if (child == null) return;
-        for (BaseNode node : child)
-        {
+        for (BaseNode node : child) {
             if (node == null) continue;
             node.walk(new StringBuilder(sb.toString()), entrySet);
         }
     }
 
-    protected void walkToSave(DataOutputStream out) throws IOException
-    {
+    protected void walkToSave(DataOutputStream out) throws IOException {
         out.writeChar(c);
         out.writeInt(status.ordinal());
         int childSize = 0;
         if (child != null) childSize = child.length;
         out.writeInt(childSize);
         if (child == null) return;
-        for (BaseNode node : child)
-        {
+        for (BaseNode node : child) {
             node.walkToSave(out);
         }
     }
 
-    protected void walkToSave(ObjectOutput out) throws IOException
-    {
+    protected void walkToSave(ObjectOutput out) throws IOException {
         out.writeChar(c);
         out.writeInt(status.ordinal());
-        if (status == Status.WORD_END_3 || status == Status.WORD_MIDDLE_2)
-        {
+        if (status == Status.WORD_END_3 || status == Status.WORD_MIDDLE_2) {
             out.writeObject(value);
         }
         int childSize = 0;
         if (child != null) childSize = child.length;
         out.writeInt(childSize);
         if (child == null) return;
-        for (BaseNode node : child)
-        {
+        for (BaseNode node : child) {
             node.walkToSave(out);
         }
     }
 
-    protected void walkToLoad(ByteArray byteArray, _ValueArray<V> valueArray)
-    {
+    protected void walkToLoad(ByteArray byteArray, _ValueArray<V> valueArray) {
         c = byteArray.nextChar();
         status = ARRAY_STATUS[byteArray.nextInt()];
-        if (status == Status.WORD_END_3 || status == Status.WORD_MIDDLE_2)
-        {
+        if (status == Status.WORD_END_3 || status == Status.WORD_MIDDLE_2) {
             value = valueArray.nextValue();
         }
         int childSize = byteArray.nextInt();
         child = new BaseNode[childSize];
-        for (int i = 0; i < childSize; ++i)
-        {
+        for (int i = 0; i < childSize; ++i) {
             child[i] = new Node<V>();
             child[i].walkToLoad(byteArray, valueArray);
         }
     }
 
-    protected void walkToLoad(ObjectInput byteArray) throws IOException, ClassNotFoundException
-    {
+    protected void walkToLoad(ObjectInput byteArray) throws IOException, ClassNotFoundException {
         c = byteArray.readChar();
         status = ARRAY_STATUS[byteArray.readInt()];
-        if (status == Status.WORD_END_3 || status == Status.WORD_MIDDLE_2)
-        {
+        if (status == Status.WORD_END_3 || status == Status.WORD_MIDDLE_2) {
             value = (V) byteArray.readObject();
         }
         int childSize = byteArray.readInt();
         child = new BaseNode[childSize];
-        for (int i = 0; i < childSize; ++i)
-        {
+        for (int i = 0; i < childSize; ++i) {
             child[i] = new Node<V>();
             child[i].walkToLoad(byteArray);
         }
     }
 
-    public enum Status
-    {
+    public enum Status {
         /**
-         * 未指定，用于删除词条
+         * 未指定，用于删除词条</br>
+         * <P>理解为某个词条在此节点存在过，但目前改词条已被删除？？？</P>
+         * <p>依然是路过子节点，但目前以不代表任何词语/词条？？？</p>
          */
         UNDEFINED_0,
         /**
@@ -270,35 +255,31 @@ public abstract class BaseNode<V> implements Comparable<BaseNode>
         WORD_END_3,
     }
 
-    public class TrieEntry extends AbstractMap.SimpleEntry<String, V> implements Comparable<TrieEntry>
-    {
-        public TrieEntry(String key, V value)
-        {
+    public class TrieEntry extends AbstractMap.SimpleEntry<String, V> implements Comparable<TrieEntry> {
+        public TrieEntry(String key, V value) {
             super(key, value);
         }
+
         @Override
-        public int compareTo(TrieEntry o)
-        {
+        public int compareTo(TrieEntry o) {
             return getKey().compareTo(o.getKey());
         }
     }
 
     @Override
-    public String toString()
-    {
-        if (child == null)
-        {
-            return "BaseNode{" + 
-                     "status=" + status +
-                     ", c=" + c +
-                     ", value=" + value +
-                    '}';
-        }
-        return "BaseNode{" +
-                "child=" + child.length +
-                ", status=" + status +
+    public String toString() {
+        if (child == null) {
+            return "BaseNode{" +
+                "status=" + status +
                 ", c=" + c +
                 ", value=" + value +
                 '}';
+        }
+        return "BaseNode{" +
+            "child=" + child.length +
+            ", status=" + status +
+            ", c=" + c +
+            ", value=" + value +
+            '}';
     }
 }
